@@ -1,0 +1,708 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\f0\fs20\lang1033\par
+                                WARCOM 2.3.1\par
+                      Copyright 1991, 2004 David Eubanks\par
+                             All rights reserved.\par
+\par
+\par
+INTRODUCTION\par
+\par
+     This program was written as a companion to WARLAW, a ROLEMASTER\par
+system for large scale fantasy combat from Iron Crown Enterprises.  An\par
+ad for this program appeared in the manual for WARLAW, and I received\par
+many orders for it from all over the world.  Unfortunately, the post\par
+office won't forward my mail from my old address anymore, and I assume\par
+any orders going to the old address are returned to sender.\par
+(Something I didn't anticipate.)  So I'm releasing the program as\par
+shareware in the hopes that more people will get some use out of it.\par
+\par
+     The program will allow you to resolve large scale combat using an\par
+approximation of the ARMS LAW system from IRON CROWN.  Since a unit\par
+can consist of one soldier, you could use it for small scale combat as\par
+well.  It is designed to be used with ROLEMASTER, but you could\par
+certainly use it with other systems by scaling the hit points and making\par
+other modifications as needed.\par
+Version 2.0, 2.1, 2.2, and 2.3 notations are modifications by KILBOT-dot-ORG.\par
+\par
+\par
+COMPATIBILITY\par
+\par
+For efficiency and reduced code size, versions 2.0 and up are compiled to\par
+require at least an 80386 processor plus coprocessor hardware.  Coprocessor\par
+hardware is standard on all modern PCs, but bear this in mind if you were\par
+thinking of using an antique 386 or 486SX machine for WARCOM.\par
+\par
+\par
+NOTATION\par
+\par
+     In the examples, if you are asked to type a key, it will appear in angle\par
+braces, e.g. <Esc>.  Do not type the braces, just the one key named.  Any text\par
+following a double-backslash (i.e. //) is a comment to you, and should not be\par
+typed by you.  This instruction book will take you through a short tour of the\par
+program.  The tutorial instructions are denoted by an exclamation point (!) in\par
+the left margin.  This way, you can go through the tutorial without reading\par
+everything, and come back later as you need.  Do not type in the exclamation\par
+points.\par
+\par
+INSTALLATION\par
+\par
+     You can run WARCOM from the floppy it came on (make a backup first), but\par
+it will be much faster running from a hard drive.  To install on your hard\par
+drive, simply create a directory and copy all the files from the floppy into\par
+that directory.  For example if your hard drive is C:, and the floppy disk is\par
+in drive A:, you could type:\par
+\par
+c:                           //change to C: drive\par
+md \\warcom                   //create new directory called warcom\par
+copy a:*.* c:\\warcom         //copy all files from A: drive to C:\\WARCOM dir\par
+cd \\warcom                   //make C:\\WARCOM the current directory\par
+warcom                       //run the program\par
+\par
+\par
+\par
+RUNNING WARCOM\par
+\par
+     To run the program, change to the directory containing all the files that\par
+came on your disk, and type warcom.  There are four optional command line\par
+parameters.  Their case and order of appearance are irrelevant.  They are:\par
+\par
+        /M       Specify monochrome mode (color is the default)\par
+        /D       Demo mode. Use this when going through the tutorial.\par
+        /C       Constant OB and DB -- the program will not adjust the OB and\par
+                 DB values for your units.  By default it penalizes exhausted\par
+                 units and damaged units.\par
+        /L       Activate text file battle log.  Each unit-on-unit attack is\par
+                 appended on to the BATTLE.LOG file.  Alt-F1 dumps a short\par
+                 synopsis of the current unit conditions to the same file\par
+                 (Version 2.2 and up only).\par
+\par
+                              IMPORTANT!\par
+If you have a monochrome monitor, you MUST specify it with the /M parameter,\par
+if you have a color monitor (CGA, EGA, VGA), you MUST NOT use this parameter.\par
+\par
+\par
+GETTING STARTED\par
+\par
+      Start the program in demo mode by typing:\par
+\par
+warcom /D                  //if you have a color monitor, or\par
+warcom /D /M               //if you have a mono monitor.\par
+\par
+You should see the (modest) intro screen, and a message saying the program is\par
+loading.  All messages to you from the program will be displayed on the bottom\par
+line of the screen in red.\par
+\par
+Note: If you accidentally ran WARCOM in the wrong mode for your monitor, the\par
+intro screen and message will not appear.  You can get out by typing the <esc>\par
+key followed by the <y> key.\par
+\par
+After a moment the unit editor will appear.  Take a moment to examine the\par
+components on the screen.  You can move the edit field around with the arrow\par
+keys.  The PgUp, PgDn, Home, and End keys will move you from one unit to\par
+another.  Right now all the units are blank, so the only thing that will\par
+change is the unit number at the top of the box.  If you can't get these keys\par
+to work, your number lock (NumLock) is probably on.\par
+\par
+!  Try the arrow keys and PgUp, PgDn, Home, End.  Type some text into\par
+!  the fields and try agian.\par
+\par
+The editor holds fifty* units.  All battles are restricted to no more than\par
+fifty* units and fifty* unit-on-unit attacks per "turn."\par
+\par
+(*) Versions 2.1 and up are compiled with a different memory model that\par
+consolidates the heap, allowing for more units and attacks to be held in\par
+(the limited available DOS) memory.  The new unit and attack limits are\par
+two hundred (200) each.  This provides for more flexibility in assembling\par
+large conflicts with many distinct units while still keeping the UNT (unit)\par
+files down around a modest 50 kilobytes.\par
+\par
+\par
+UNIT STATS\par
+\par
+     Some of the fields on the unit editor are used for attack\par
+resolution, others are for your use in description, identification,\par
+etc.\par
+                             IMPORTANT!\par
+    If the attack resolution program expects a number in a\par
+particular field, and you have left it blank, or entered nonsense, it\par
+will typically default to zero (unless otherwise noted below).\par
+\par
+The fields for units are each described below:\par
+\par
+Name: (optional) Name for unit.\par
+\par
+Race: (optional) Race of unit.\par
+\par
+Type: By default, WARCOM assumes that combatants are NORMAL size (like\par
+      humans, orcs,...).  However, you may wish to have other types.\par
+      The following additional types are provided for:\par
+\par
+      Small         // e.g. small dogs, little birds, wee lizards, ...\par
+      Type I        // e.g. ogre\par
+      Type II       // e.g. demon\par
+      Large         // e.g. giants\par
+      Super-Large   // e.g. adult dragon\par
+      No stun       // e.g. normal-sized undead (Ver 2.0)\par
+\par
+      Creatures and Treasures lists the type for each creature therein.\par
+\par
+      If you enter a type not on the list above, it defaults to\par
+      Normal, so for normal sized units, you can enter things like:\par
+      Infantry, Cavalry, Spelluser, Potwasher, etc.\par
+\par
+Weapon: Must be from the list accessed by F1.\par
+\par
+Armor Type: Rolemaster armor type 1-20.  See F1 for list.\par
+\par
+Discipline Mod: A negative number that specifies how fast morale\par
+                deteriorates.  (elite: -5, a good unit: -20, a bad one: -60)\par
+\par
+Last morale check: Generated when attacks are resolved.  If blank, no\par
+                   morale failure occured.  A letter A-E means morale failure\par
+                   of increasing severity.  You can use the WARLAW\par
+                   tables, or decide on your own exactly what this\par
+                   means.  If you are a gamemaster, you may wish to\par
+                   allow your players to roll their own morale rolls,\par
+                   in which case simply ignore this.\par
+\par
+Formation: (optional) Formation of unit.\par
+\par
+The remaining stats all have "start" and "now" stats.  The program\par
+will adjust the "now" stats.  There is also a "Mod" column for\par
+modifiers to these stats.  The one for movement is not used by the\par
+program and is just for your reference.  The rest are used in attack\par
+resolution.  It usually prefered to edit the modifiers rather than the\par
+"now" value during the course of a battle to meet changing situations.\par
+\par
+Morale: Usually starts at 100, but an extraordinary (non-100) starting\par
+        value may be specified.  Modified by leadership, who outnumbers\par
+        whom, etc.  The "now" value for morale is strictly an output-only\par
+        field.\par
+\par
+OB,DB: Offensive and defensive bonuses.  The mod column is typically\par
+       used to specify parry amounts.  Example:  A unit has "now"\par
+       values for OB, DB of 40 and 5, resp.  To "parry" 10, edit the\par
+       modifiers for OB,DB to -10,10, respectively.  You can also use\par
+       the mod column to add in the unit's OB bonus for its leader's\par
+       tactical ability.\par
+\par
+Exhaustion: Usually starts at 100 for a rested unit.  As a unit\par
+            becomes tired, the "now" number will decrease, affecting\par
+            movement, OB, and DB (unless you have used the /C switch).\par
+            A spell or inspirational leader might give a modifier.  If\par
+            a unit rests for a while, you may want to edit the "now"\par
+            value to reflect this.\par
+\par
+Movement: For your use only.  The "now" value will degrade as the unit\par
+          tires.  (Except when using /C with Version 2.0 and above).\par
+\par
+Number: Number of combatants in unit.  (no modifier)\par
+\par
+Average number of hits: This is the approx number of hits per\par
+                        combatant for unit members -- NOT the total\par
+                        number of hits for the unit.  As the "now"\par
+                        value decreases, it will affect OB and DB\par
+                        unless /C was used. Note: in rare cases, the\par
+                        average hits can actually go UP after a\par
+                        battle!  (no modifier)\par
+\par
+                        COMMENT: In Version 2.0 and up, the anomalous\par
+                        behavior of average hits rising occurs rarely,\par
+                        but it can still occur when a batch of casualties\par
+                        accrues disproportionately upon the already-\par
+                        wounded (low hits) defenders.\par
+\par
+\par
+UNIT EDITOR FUNCTIONS\par
+\par
+You will notice the the function keys F1-F10 are listed with a brief\par
+description of their functions. They are described in more detail below.\par
+\par
+F1 -  Brings up a screen listing the legal weapon names you will use when\par
+      editing a unit.  You do not have to get the name exactly as it appears:\par
+      The following will all specify the battleax, because they vary only\par
+      by upper/lower case and inclusion of whitespace:\par
+\par
+      Battleax\par
+      battle ax\par
+      Battle Ax\par
+      BATTLEAX\par
+      BATTLE AX\par
+\par
+      However, if you misspell the word (like "battlax"), it will not be\par
+      recognized.\par
+\par
+F2 -  Allows you to edit the filename.  It is suggested that all unit files\par
+      end in .unt and that all battle files end in the .btl extension.  You\par
+      must type the full legal DOS filename.\par
+\par
+F3 -  Loads the file named.  All units currently in the editor will be\par
+      overwritten by the new ones.\par
+\par
+F4 -  Saves the units that are in the editor into the named file.  You can\par
+      create as many of these as you want (only limited by disk space).\par
+\par
+      NOTE:  I have noticed that battle files often yield a save error\par
+      message unless one returns to edit the first attack.  But then\par
+      the problem goes away.  This is a minor pending issue.\par
+\par
+F5 -  Reset the current unit's stats.  Each unit has two sets of stats: "at\par
+      start" and "now."  The "now" stats change as the battle progresses.  The\par
+      "at start" stats don't change unless you edit them, or load a new file.\par
+      This key will copy the "at start" stats to the "now" stats, so you can\par
+      refight a battle, etc.\par
+\par
+F6 -  This is the same as F5, except it resets the stats for ALL fifty* units.\par
+\par
+F7 -  Clear stats for current unit.  Erases all the fields for this unit.\par
+\par
+F8 -  Erases all fields for ALL units.\par
+\par
+F9 -  Copy unit.  When you hit <F9>, the current unit is copied to the next\par
+      numbered unit.  This is useful when you have several units with similar\par
+      stats.  CAUTION: If a "next numbered unit" already exists, it WILL be \par
+      clobbered (overwritten).\par
+\par
+F10 - Go to attack.  More on that in a minute.\par
+\par
+ESC - Exits you to DOS.\par
+\par
+!    Try F1, look at weapons available. Use the arrow keys to move up\par
+!    down.  <Esc> aborts, <Enter> selects the weapon.\par
+\par
+!    Type <F3>.  Respond to message with <y>.  Several units have been\par
+!    loaded.  Move between units with PgUp, PgDn and examine them.\par
+\par
+!    Use F8 to erase all units.\par
+!    Type in some stats (it doesn't matter what) for a unit or two.\par
+\par
+!    Type <F2>  Change filename to myfile.unt\par
+!    Hit <Enter> when finished.\par
+\par
+!    Type <F4>. Answer <y> to query.  You have just created a new file\par
+!    named myfile.unt containing your units.\par
+\par
+!    Use <F2> to change the filename back to sample.unt, and use <F3>\par
+!    to restore the units.\par
+\par
+!    Hit <F10> to go to the attack editor\par
+\par
+\par
+THE ATTACK EDITOR\par
+\par
+     The attack editor is used to specify who is attacking whom.  You\par
+can specify up to fifty* attacks at one time.  You can store and retrieve\par
+.btl files with your attacks just like the unit editor.\par
+     You can move about just as in the unit editor.  The long box in\par
+the lower half of the screen cannot be edited--it simply summarizes\par
+crucial information about the units.  Units are referenced by NUMBER\par
+in the attack editor, and you will use the display at the bottom (the\par
+unit summary window) to determine the unit number for combatants.\par
+\par
+!     Use the PgUp, PgDn and arrow keys to move around\par
+\par
+     There is no restriction on how many attacks you can specify for\par
+each unit.  e.g. if a unit is fighting three opposing units, you might\par
+assign three attacks for it.  The total number of attacks is restricted\par
+to fifty*.\par
+\par
+\par
+ATTACK FIELDS\par
+\par
+     The fields are used to specify who is attacking whom with what, and\par
+to specify a modifier.  They are described below:\par
+\par
+Attacker's Unit #:  Number (one thru fifty*) of the attacker.\par
+\par
+Attacker Size:      This field allows you to specify how many\par
+                    of the attackers will be actually participating in the\par
+                    attack against the specific defender indicated.  If you\par
+                    leave this field blank, it defaults to 100% of attacker\par
+                    (i.e. everyone in the attacking unit applies one attack\par
+                    against the defending unit).  This is an exception to\par
+                    the blank-equals-zero rule.  You can specify the number\par
+                    of attackers in two ways:\par
+                       (1) you can enter any number bigger than zero -- it\par
+                           can even be bigger than the number of attackers\par
+                           in the unit if you wish.  This number is absolute\par
+                           and will not change by itself, even though \par
+                           casualties may accrue.\par
+                       (2) you can enter a number bigger than zero followed\par
+                           by a percent sign (%).  This tells the program to\par
+                           use that percent of the number of attackers.  This\par
+                           number is relative and will thus decline as the\par
+                           number of attackers may dwindle.\par
+                    Examples:\par
+                           * 1 means 1 attack.\par
+                           * 100 means 100 attacks, even if there are\par
+                             only 10 men in the unit.\par
+                           * 50% means half of the attackers get to\par
+                             attack.\par
+                           * 300% means every attacker gets 3 attacks.\par
+                    It is typical, for example, when a single unit is in\par
+                    combat with two other units, for that unit to apply 50%\par
+                    in each of two separate "attacks."  It is also common\par
+                    to specify much smaller percentages, reasoning that only\par
+                    a very few of each unit are actually on the front line\par
+                    at any given time.  This also serves to slow a battle\par
+                    down to what some might consider a more "realistic" pace.\par
+\par
+Defender's unit #: Unit number of the defending unit.\par
+\par
+Defender's number or %: Same as above for defender.  If blank, the\par
+                        whole unit defends (same as entering 100%).\par
+                        By "defends," this means "number in the unit who\par
+                        are subject to attack."  If only a portion are on\par
+                        the front line, this number should reflect that fact.\par
+                        This number should NOT be larger than the number of\par
+                        men in the unit (the program safeguards against this\par
+                        internally).  In other words, this figure is the\par
+                        the max number that could be killed in this next\par
+                        round of battle.\par
+\par
+Modifier: An accumulation of any OB mods not already taken care of on the\par
+          unit editor.  For example, if you decide this particular attack\par
+          should be at +20 since the defenders are surprised, but also -10\par
+          because it's dark, the cumulative mod would be +10, or just\par
+          10.\par
+\par
+(VERSION 2.1) DmX:  Concussion damage multiplier.  A valid factor from 0\par
+          through nine may be entered here.  If blank or nonsense, the\par
+          default is '1' (normal damage).  If the attackers as a group are\par
+          currently doing multiplied weapon damage due to size (giants,\par
+          ents), frenzy, monk magic, herbs, etc., enter that multiplier\par
+          here for this attack.\par
+\par
+(VERSION 2.1) SpCr:  Special attack critical type.  The default is 'n' for\par
+          'normal' criticals (the regular crit tables and the nonmagic\par
+          columns for large and super-large creatures).  However, in certain\par
+          situations an attacking unit might predominately be doing criticals\par
+          that are more effective:\par
+\par
+            'k' - Weapons kata; an extra critical, same roll, one degree\par
+                  less.  For example, the attackers are all monks.  This\par
+                  tends to increase damage but not critical casualties.\par
+            'd' - Double independent criticals of the same degree. \par
+                  For example, hits with their weapons do an extra\par
+                  cold critical, rolled separately.  This tends to increase\par
+                  the chance of getting a casualty because there are two\par
+                  chances at it with each solid hit.\par
+            'm' - Magic.  The attackers predominately use magic weaponry.\par
+                  Only a factor vs. large and super-large targets.\par
+            'h' - Holy.  The attackers all do "holy" crits, applying against\par
+                  all opponents (e.g. because they are defending consecrated\par
+                  grounds).\par
+            's' - Slaying.  The attackers have weapons that are "of slaying"\par
+                  vs. the defending unit's individuals.  Greatly increases\par
+                  casualties and damage versus any opponent type.\par
+\par
+Weapon: If a weapon is supplied here, it overrides the weapon\par
+        specified by the unit editor.  If blank, the weapon on the\par
+        unit editor is used.  You may wish to use this when a\par
+        secondary weapon (e.g. ranged weapon at the beginning of\par
+        battle) is used temporarily.\par
+\par
+\par
+UNIT SUMMARY WINDOW\par
+\par
+     Five units at a time are diplayed in the window, and you can move\par
+around with the <F5> and <F6> keys.  The information to the right of\par
+the unit name is a summary of important stats.  The first two entries\par
+are the strength of the unit (i.e. percent strength), and last morale\par
+failure (A-E, or blank).  The remaining numbers are the "now" stats\par
+from the units editor in the same order as they appear there:\par
+morale, OB, DB, Exhaustion, Movement, Number, and Ave. Hits.\par
+     If a unit is making an attack, a small spear appears to the left\par
+of its name.  If it is defending an attack, it will have a small\par
+shield.  It may have both.  These symbols will appear AFTER an attack\par
+is edited, and another key is hit (you can hit <Ins> to make them come\par
+up).\par
+\par
+Version 2.1: An extra call to refresh the unit summary window is now\par
+included in new versions, making the <Ins> keypress virtually obsolete.\par
+This function call used to slow down editing too much in the IBM AT-286\par
+days, but with Pentium technology in the hundreds of MHz, it is unnoticeable.\par
+\par
+\par
+ATTACK EDITOR FUNCTIONS\par
+\par
+F1-F4 are the same as above, except F3 and F4 load and save battle\par
+files (use the .btl extension), rather than unit files.  NOTE: Version 2.1\par
+battle files are NOT compatible with older battle files, and vice-versa, as\par
+the number of data fields in V2.1's attack editor is different.  (Unit files\par
+are still compatible).\par
+\par
+!     type <F3> and <y> to bring up sample.btl\par
+\par
+F5 -  Move unit summary window up 5 units.\par
+\par
+F6 -  Move unit summary window down 5 units.\par
+\par
+F7 -  Clear current attack.  Blank all fields.\par
+\par
+F8 -  Clear all attacks.  Blank all fields on all attacks.\par
+\par
+F9 -  Execute current attack.  This key will cause the program to\par
+      attempt to execute the current attack shown.  It will not be\par
+      successful if it cannot find the weapon, there are no\par
+      attackers, or there are no defenders.  Normally, you will use\par
+      this key only if you want this attack executed prior to all\par
+      the others in the battle file.  When you use F10, all attacks\par
+      are resolved "simultaneously", and the units are backed up prior\par
+      to resolution.  Note that there is no way to "undo" an F9\par
+      attack, unless you remember the "now" stats of the defender\par
+      yourself and use the unit editor to change them back.\par
+\par
+      If you use the /L command line option with Version 2.2 and above,\par
+      a one-line synopsis of the results of this attack will be appended\par
+      to the BATTLE.LOG file.\par
+\par
+F10 - Execute all attacks.  Before any attacks are made, the current\par
+      units are saved to BACKUP.UNT, so that they can be recovered if\par
+      you discover you specified an attack wrong.  e.g. if, after all\par
+      attacks are resolved, you discover that the famous Orc Killer\par
+      Squad was wiped out in one fell swoop, which you think shouldn't\par
+      have happened, you can go back to the unit editor and use <F2>\par
+      to change the filename to BACKUP.UNT, and use <F3> to load it\par
+      back up -- the Squad is restored (along with all the other units).\par
+      All attacks are executed simultaneously.\par
+\par
+      NOTE: Version 2.0 fixed certain bugs that probably resulted in \par
+      the occasional disappearance of "squads" as described above.\par
+      Nevertheless, the backtracking feature is still useful for \par
+      retrying a battle round when faced with odd-looking results.\par
+\par
+      If you use the /L command line option with Version 2.2 and above,\par
+      a synopsis of the results of all these attacks will be appended to the\par
+      BATTLE.LOG file.\par
+\par
+ALT-F1  If using Version 2.2 or above and you specified the /L command line\par
+      option, Alt-F1 will prompt you for whether you want to dump the units\par
+      to the BATTLE.LOG file.  A unit dump simply appends a short unit status,\par
+      one line per unit, to the file.  Each unit's name, number, percent\par
+      effectiveness, morale, starting and current manpower, and starting and\par
+      current average hits are shown.\par
+\par
+ESC - Returns you to the unit editor.\par
+\par
+INS - The names of the attacker and defender, and the spear and shield\par
+      symbols are not updated until you hit <Ins>, or one of the\par
+      funciton keys, or PgUp, PgDn.\par
+\par
+      NOTE: Version 2.1 throws in an extra update call that probably\par
+      makes <Ins> obsolete in most cases.\par
+\par
+!    Use <F5> and <F6> to move the window up and down.\par
+!    Notice the spears and shields, representing attacks and defenses.\par
+\par
+\par
+SAMPLE BATTLE\par
+\par
+    The battle for Potter's hill was a key battle in the Markon and\par
+Syvanian war.  We find three companies of Markon swordsmen engaged with\par
+two companies of Sylvanians.  Markon companies B and C have hit the\par
+Sylvanian company B hard, and threaten to outflank it.  Xanax, a\par
+magician, hurls fireballs as Tiney leads the Sylvanians from the\par
+safety of his honor guard.  Unfortunately, a unit of Sylvanian archers\par
+can just reach him from their vantage point on top of Potter's hill.\par
+(Tiney and Xanax are PCs and can be represented by units of 1 man.\par
+The GM should be flexible about what happens when the unit disapears!)\par
+\par
+Notes:\par
+     (*) Version 2.0 and up make increased and varied use of random\par
+number generation that probably prevents the /D demo mode from running\par
+exactly as described for Version 1.0 below!\par
+\par
+     The opposing Co. A's attack each other with 25% of their strength.\par
+The rest of the troops in those companies are in back of the fighting.\par
+\par
+     The GM rules that Xanax's fireball will attack 10 Sylvanians\par
+from Co. A (using accuracy table in WARLAW).  Thus there are 10\par
+attacks and 10 defenders for his attack.\par
+\par
+     The GM also rules that 5% of the archers can target Tiney, so the\par
+remaining 95% fire at the guards.\par
+\par
+     Markon Co.s B and C each attack at 25% against 25% of Sylvanian Co. B.\par
+\par
+     Sylvanian Co. B attacks with 25% against each of Markon Co.s B\par
+and C (with a negative mod for split attack--GM ruling).\par
+\par
+!    Hit <F10> and <y>.  Observe the new unit stats.  You can go back\par
+!    and forth to the unit editor if you wish.\par
+\par
+     Round 1.\par
+     Tiney escapes unscathed.\par
+     First blows are exchanged.\par
+\par
+!    Notice that exhaustion, movement, OB, and DB are all changing\par
+!    Hit <F10) and <y>.\par
+\par
+     Round 2.\par
+     Sylvanian Co. B is down to 83% after two rounds.\par
+\par
+!    Hit <F10) and <y>.\par
+\par
+     Round 3.\par
+     A fateful arrow finds the Markon Commander.  Friendly units pass\par
+     morale checks.\par
+     Sylvanian Co. B down to 77%\par
+\par
+!    Hit <F10) and <y>.\par
+\par
+     Round 4.\par
+     Sylvanian Co. A fails morale, and must take an 'A' morale roll.\par
+     The GM rolls a 92 on table T-4 of WARLAW -- the unit routs.\par
+     The Sylvanian Co. B must take another morale check (because a\par
+     friendly unit is retreating), which it passes.  The commander\par
+     decides his situation is hopeless however, and surrenders.\par
+\par
+NOTES:\par
+     Normally, there would be some adjustments to the attacks between\par
+attack resolutions, but for purposes of a demonstration, this was not\par
+done.\par
+     Notice (on the unit editor) that all of the units are using some\par
+of their OB to parry.  This tends to make casualties lighter, giving\par
+slower battles.\par
+     Restricting units to attack with only 25% of their strength (due\par
+space restrictions) also slows down the battle, giving a more fluid,\par
+realistic feel.  If you have a large number of units, and wish to get\par
+the battle over with rapidly, use 100%.\par
+\par
+\par
+IMPORTANT NOTES ON PLAY\par
+\par
+    In general, the more attacks you allow per unit, the more quickly\par
+the battle will be resolved.  This, however, has the negative effect of\par
+not allowing units the chance to reatreat or rout (on morale failures).\par
+A unit may suddenly go from 50% strength to zero in one turn.  You will\par
+have to experiment with the number of attacks and amount of parry to\par
+achieve a battle pacing you like.\par
+     Generally speaking, since the computer is doing all the work\par
+anyway, you are free to make the attacks-per-round a fairly small\par
+percentage of the troops.  The smaller (to a point) this number is,\par
+the more opportunity there is to note dramatic turning points.\par
+Some would say it's unrealistic to have every man in a large unit\par
+be able to attack every turn anyway, whether for reasons of available\par
+space, grouping, or simply how exhausting that would be.  A figure of\par
+10% is suggested, and if it goes too slow, increase it.  I used 25% \par
+in the example to get it over with quickly.  Even missle-firing units\par
+should consider following this procedure.  You will want to think about\par
+exactly how long a "round" is in your battleground-time.\par
+\par
+\par
+ADDING NEW WEAPONS\par
+\par
+If you want to add weapons to the existing list, here's how to do it.\par
+\par
+    NOTE: If you do it wrong, the program won't work properly!  So\par
+          make a couple of backup copies just in case.\par
+\par
+You need to modify the WEAPONS.DAT file with a text editor. The following\par
+isn't going to make any sense if you aren't familiar with ARMS LAW.\par
+\par
+At the end of the existing file, or immediately before an existing weapon, add\par
+\par
+%name of weapon\par
+%h1,r1,h2,c1,c2,c3,c4,c5\par
+etc.\par
+\par
+The first line is for Armor Type (AT) 20, the next line for AT 19 etc.\par
+\par
+where h1=#hits inflicted for dice roll of 150 (max possible damage)\par
+      r1=minimum dice roll that gets hits for that AT\par
+      h2=#hits when you roll r1 (i.e. minimum non-zero hits)\par
+      c1=min roll for E critical or 0 if you can't get an E critical\par
+      c2=min roll for D critical or 0 if you can't get a D critical\par
+      c3=...C crit...\par
+      c4=...B crit...\par
+      c5=...A crit...\par
+      \par
+In some cases (like for criticals higher than E) you will have to make\par
+approximations.  You can adjust the effectiveness of weapons by changing\par
+these stats.\par
+\par
+Some of the weapons in the existing file have been modified.  If you want\par
+an example of one that isn't, look at CLUB.  Refer to Arm's Law and you will\par
+see where the numbers come from.  I typed all these in by hand, so there may\par
+be some mistakes that I didn't catch.  I'd appreciate it if you find anything\par
+absurd in there if you'd let me know!  Upload your new weapon files if\par
+they're good, and let others try them out!\par
+\par
+\par
+OTHER VERSION NOTES -- (KILBOT-dot-ORG)\par
+\par
+A great advantage of WARCOM is that it provides a far better approximation to\par
+an exhaustive Rolemaster battle than what even a meticulously executed WAR LAW\par
+battle would yield.  This is because while WAR LAW uses scores of new tables\par
+(what else indeed?) intended to simulate massed attacks on mass defense,\par
+WARCOM actually models each individual attack, which could run to thousands or\par
+even tens of thousands of attacks per turn.  While some aspects of this\par
+simulation are still approximations to what a thorough Rolemaster treatment\par
+would yield, features such as the careful tracking of concussion hits,\par
+accurate probabilistic models, careful rendering of weapons tables and\par
+differentiation of critical levels for extra hits and casualties make for\par
+surprisingly consistent results.\par
+\par
+Some notable WARCOM features hidden in the internals:\par
+\par
+(*) Every attack specified in a BTL file for a set of units in a UNT file is\par
+executed *individually*, one after another when F10 is pressed.  Every hit\par
+point counts, and every chance for assessing a casualty to the defense due to\par
+criticals or high concussion is examined.\par
+\par
+(*) More-severe criticals not only increase the chance of creating a casualty,\par
+but also do more damage that gets added to the base weapon damage.  This is a\par
+Version 2.0 enhancement.\par
+\par
+(*) Version 2.0 prevents critical casualties from accruing to Large and\par
+Super-Large creatures unless they are struck by at least a 'B' or 'D'\par
+critical, respectively.  Older WARCOM versions used a flat casualty chance\par
+based on defender "size" for any critical hit at all.\par
+\par
+(*) Damage from criticals is now randomized so as to be distributed similarly\par
+to what you would get from rolling on the Rolemaster tables.  The added\par
+computing power of year 2000+ machines makes the added computational burden\par
+from all the random number generation virtually unnoticeable.\par
+\par
+(*) Individual casualties can also now occur in Version 2 due to concussion\par
+hits alone.  This is guaranteed if a single hit does more damage than a\par
+unit's starting average hits, and occurs probabilistically if the damage is\par
+more than the current average.\par
+\par
+Version 2.2 adds a cursory battle logging feature (logs to ASCII file\par
+BATTLE.LOG if /L switch is used) for the convenience of those people who like\par
+to track unit "experience" as per War Law.  Using the file record, it is\par
+relatively straightforward to do searches and sorts and determine what a\par
+particular unit achieved in battle (e.g. hits delivered, casualties inflicted\par
+on the enemy).\par
+\par
+Version 2.3 fixes some pernicious bugs.  Previous versions had a problem where\par
+the hit point average for large units would be truncated down at the end of\par
+each turn.  This truncation would occur even if a 500-man unit took a single\par
+hit from a single foe, and over time would thus exert an inexorable (and\par
+unrealstic) downward bias on the unit's hit point average.  V2.3 changes the\par
+truncation to a probabilistic rounding and removes the erroneous bias.\par
+Version 2.3 also identified and removed a bug wherein an eliminated unit\par
+(zero non-casulaties remaining) that was assigned a fixed number of offensive\par
+attacks would still get those attacks assessed in subsequent battle turns.\par
+\par
+\par
+ACKNOWLEDGEMENTS\par
+\par
+    Thanks to: Ron Goral, Coleman Charlton, and the folks at ICE!\par
+    KILBOT-dot-ORG thanks Dr. Eubanks for yielding the source code for\par
+    more modifications, bug fixes, and new features.\par
+\par
+\par
+DISCLAIMER\par
+\par
+    I don't know of any cases of this program causing someone's\par
+computer to blow up, but hey, ya' never know.  Use it at your own\par
+risk.  I do not assume liability for any damages incurred by using the\par
+program.\par
+\par
+\par
+}
+ 
