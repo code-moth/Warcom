@@ -1,6 +1,7 @@
-﻿WARCOM â€” PORTABLE WINDOWS 11 x64 EDITION
+﻿WARCOM 3.0 PORTABLE WINDOWS 11 x64 EDITION
 ========================================
 
+0. Download the latest "WARCOM-{version}-runtime-win-x64.zip" file from the "releases" directory.
 1. Right-click the ZIP and choose Extract All. Do not run it inside the ZIP.
 2. Open the extracted WARCOM-runtime-win-x64 folder.
 3. Double-click Start WARCOM.cmd.
