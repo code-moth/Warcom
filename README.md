@@ -7,7 +7,8 @@ This rebuild keeps its C++ combat calculations and replaces the DOS interface wi
 
 ## Windows 11 Super quick start
 
-If you couldn't be bothered building the application yourself, and you trust what ChatGPT 5.6 with Codex 6 Astra produced as a run time, you can just follow what is set out in "START HERE.md"
+If you couldn't be bothered building the application yourself, and you trust what ChatGPT 5.6 with Codex 6 Astra produced as a run time, you can just follow what is set out in "START HERE.md":
+
 0. Download the latest "WARCOM-{version}-runtime-win-x64.zip" file from the "releases" directory.
 1. Right-click the ZIP and choose Extract All. Do not run it inside the ZIP.
 2. Open the extracted WARCOM-runtime-win-x64 folder.
