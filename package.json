@@ -1,0 +1,24 @@
+{
+  "name": "warcom-local",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "start": "node backend/server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build:core": "node scripts/build-core.mjs"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.9",
+    "prettier": "3.9.8",
+    "typescript": "5.9.2",
+    "vite": "7.3.6"
+  }
+}

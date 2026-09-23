@@ -1,0 +1,32 @@
+import type { Unit } from "./types";
+export function newUnit(): Unit {
+  return {
+    name: "New unit",
+    race: "",
+    type: "Normal",
+    weapon: "broadsword",
+    armor: 1,
+    discipline: -20,
+    moraleFailure: "",
+    formation: "",
+    moraleStart: 100,
+    moraleNow: 100,
+    moraleMod: 0,
+    obStart: 60,
+    obNow: 60,
+    obMod: 0,
+    dbStart: 20,
+    dbNow: 20,
+    dbMod: 0,
+    exhaustionStart: 100,
+    exhaustionNow: 100,
+    exhaustionMod: 0,
+    movementStart: 100,
+    movementNow: 100,
+    movementMod: 0,
+    numberStart: 100,
+    numberNow: 100,
+    hitsStart: 50,
+    hitsNow: 50,
+  };
+}
