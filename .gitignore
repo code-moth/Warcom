@@ -2,10 +2,8 @@ node_modules/
 dist/
 build/
 .tools/
-data/*
 !data/.gitkeep
 source-download/
-*.zip
 repository-info.json
 test-results/
 releases/
