@@ -1,8 +1,19 @@
 # WARCOM — local battle command
 
-WARCOM is a companion to Rolemaster / War Law fantasy mass combat. It manages units and attack assignments, then calculates casualties, average remaining hits, morale, exhaustion, and combat penalties. The original DOS application was written by David Eubanks and subsequently modified by KILBOT.
+WARCOM is a companion to Rolemaster / War Law fantasy mass combat. It manages units and attack assignments, then calculates casualties, average remaining hits, morale, exhaustion, and combat penalties. The original DOS application was originally written by David Eubanks.
 
 This rebuild keeps its C++ combat calculations and replaces the DOS interface with a local browser application. Nothing is uploaded; no cloud service, database server, paid API, or account is required.
+
+
+## Windows 11 Super quick start
+
+If you couldn't be bothered building the application yourself, and you trust what ChatGPT 5.6 with Codex 6 Astra produced as a run time, you can just follow what is set out in "START HERE.md"
+0. Download the latest "WARCOM-{version}-runtime-win-x64.zip" file from the "releases" directory.
+1. Right-click the ZIP and choose Extract All. Do not run it inside the ZIP.
+2. Open the extracted WARCOM-runtime-win-x64 folder.
+3. Double-click Start WARCOM.cmd.
+4. Your browser opens http://127.0.0.1:4173.
+5. See the rest of the file "START HERE.md" for further instructions.
 
 ## Windows 11 quick start
 
