@@ -1,24 +1,18 @@
 {
-  "name": "warcom-local",
-  "version": "3.0.0",
+  "name": "warcom-command",
+  "version": "1.0.0",
   "private": true,
+  "description": "A faithful TypeScript/web port of Warcom, a War Law mass-combat resolver, verified attack-by-attack against the original compiled DOS source.",
   "type": "module",
+  "license": "GPL-3.0",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
-    "start": "node backend/server.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "build:core": "node scripts/build-core.mjs"
-  },
-  "dependencies": {
-    "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "build": "tsc && node tools/copy-build.mjs",
+    "gen:weapons": "node tools/gen-weapons.mjs",
+    "gen:tables": "node tools/gen-tables.mjs",
+    "test": "node --test tests/*.mjs",
+    "test:reference": "bash tests/reference/build.sh"
   },
   "devDependencies": {
-    "@types/react": "19.1.10",
-    "@types/react-dom": "19.1.9",
-    "prettier": "3.9.8",
-    "typescript": "5.9.2",
-    "vite": "7.3.6"
+    "typescript": "^5.6.0"
   }
 }

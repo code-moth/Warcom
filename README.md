@@ -1,145 +1,382 @@
-# WARCOM — local battle command
+# Warcom Command
 
-WARCOM is a companion to Rolemaster / War Law fantasy mass combat. It manages units and attack assignments, then calculates casualties, average remaining hits, morale, exhaustion, and combat penalties. The original DOS application was originally written by David Eubanks.
+A from-scratch TypeScript/web port of **Warcom**, David Eubanks' 1991–2004 DOS
+companion program for *War Law* — Iron Crown Enterprises' mass-combat
+system for Rolemaster. It runs the same combat math as the original compiled
+program, with a browser-based roster, attack queue, battle log, and full
+read/write support for the original `.UNT`/`.BTL` save files.
 
-This rebuild keeps its C++ combat calculations and replaces the DOS interface with a local browser application. Nothing is uploaded; no cloud service, database server, paid API, or account is required.
+This repository contains:
 
+- **The engine and web app source** (`src/`, `dist/`) — a faithful,
+  differentially-tested port.
+- **The original DOS source**, untouched (`legacy/`) — the ground truth
+  everything else in this repo is checked against.
+- **The test suite** (`tests/`) — including a harness that compiles the real
+  original C++ and runs thousands of randomized battles through both it and
+  the TypeScript engine, comparing results exactly.
+- **A standalone offline build** (`warcom-command-offline.zip`) — the same
+  app, pre-bundled so it runs from a double-clicked `index.html` with no
+  server and no internet connection.
 
-## Windows 11 Super quick start
+Jump to: [Where this came from](#where-this-came-from) ·
+[How it was ported](#how-it-was-ported) ·
+[Running it](#running-it) ·
+[Repository layout](#repository-layout) ·
+[User manual](#user-manual) ·
+[License](#license)
 
-If you couldn't be bothered building the application yourself, and you trust what ChatGPT 5.6 with Codex 6 Astra produced as a run time, you can just follow what is set out in "START HERE.md":
+---
 
-0. Download the latest "WARCOM-{version}-runtime-win-x64.zip" file from the "releases" directory.
-1. Right-click the ZIP and choose Extract All. Do not run it inside the ZIP.
-2. Open the extracted WARCOM-runtime-win-x64 folder.
-3. Double-click Start WARCOM.cmd.
-4. Your browser opens http://127.0.0.1:4173.
-5. See the rest of the file "START HERE.md" for further instructions.
+## Where this came from
 
-## Windows 11 quick start
+*War Law* was published in 1991 as Rolemaster's system for resolving large
+battles — whole units fighting whole units, rather than one character at a
+time. Warcom was a companion DOS program that automated War Law's combat
+math: it reads unit rosters and attack orders, rolls percentile combat
+results exactly as the tabletop rules specify, and tracks casualties and
+morale across a battle.
 
-1. Install **Node.js 24 LTS** (or Node 22.12+) from [nodejs.org](https://nodejs.org/). Reopen PowerShell after installation.
-2. Open PowerShell in this project's directory.
-3. Run:
+Source: **[github.com/code-moth/Warcom](https://github.com/code-moth/Warcom)**
+(`main` branch), by David Eubanks, released under **GPL-3.0**. The original
+`README.md` in `legacy/` says it best:
 
-```powershell
-.\setup.ps1
-.\run.ps1
+> This program was written as a companion to War Law, a Rolemaster system
+> for large scale fantasy combat from Iron Crown Enterprises, originally
+> published in 1991, and now long out-of-print. It is released here in
+> source code form with the permission of its' author. It needs some
+> serious updating to give it a modern user interface...
+
+This project is that modern interface — built directly from the original
+`main` branch's C++ source, not from any other existing rewrite.
+
+## How it was ported
+
+The goal was bit-for-bit fidelity to the original program's combat math, not
+just a plausible re-implementation of the rules. That meant treating the
+compiled C++ as the specification, and verifying against it directly rather
+than trusting a manual read of the code.
+
+**Differential testing against a compiled oracle.** `tests/reference/`
+lightly patches the original `RESOLVE.CPP` (only enough to make it compile
+standalone — see `tests/reference/build.sh`) and compiles it into a small
+command-line harness. `tests/engine-vs-original.test.mjs` generates hundreds
+of randomized units and attacks, feeds each one through both the real
+compiled C++ and the TypeScript engine, and asserts every output field
+matches exactly — hit counts, casualties, damage, morale, special-critical
+outcomes, across every target size class.
+
+**Numeric fidelity.** The original is single-precision C `float` arithmetic
+with specific random-number routines:
+
+- `Rng.rand()` reproduces Borland C's specific linear congruential
+  generator (not glibc's — they differ) for die rolls.
+- `Rng.ran1()` is a direct port of the Park–Miller generator with a
+  Bays–Durham shuffle, used for continuous values.
+- `Rng.gasdevZpos()` ports the original's Box–Muller transform.
+- Every intermediate result that would have been a C `float` is rounded
+  with `Math.fround()` so the two implementations drift identically or not
+  at all.
+
+**Data, not retyped.** The critical-hit tables and weapon tables aren't
+hand-transcribed — `tools/gen-tables.mjs` and `tools/gen-weapons.mjs`
+extract them programmatically from `legacy/RESOLVE.CPP` and
+`legacy/WEAPONS.DAT` into `src/engine/tables.ts` and
+`src/data/weapons-dat.ts`, so a transcription error simply can't happen.
+
+**A genuine bug, reproduced on purpose.** Armor type is documented
+throughout War Law as **AT1–AT20** (1-indexed), but the original C++ used
+that value directly as a subscript into a zero-based, 20-element array:
+
+```cpp
+// legacy/RESOLVE.CPP (abridged)
+int at = atArmorType;               // 1..20, as entered
+WeaponRow &row = weapon->rows[at];   // but rows[] is 0-indexed!
 ```
 
-If Windows blocks PowerShell scripts, use these commands instead (the policy change applies only to that process):
+So armor type 1 actually read the AT2 column, every armor type 2–19 was off
+by one column, and armor type 20 wrapped around to read AT1. This isn't a
+rules interpretation — it's confirmed directly against the compiled
+original and covered by the differential tests. `src/engine/resolve.ts`
+implements both mappings and a **Legacy armor indexing** setting in the app
+picks between them: on, to reproduce the original exactly (so old results
+stay reproducible); off (the default for new battles) for the corrected
+1-to-1 mapping.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
-powershell -ExecutionPolicy Bypass -File .\run.ps1
+```ts
+// src/engine/resolve.ts
+export function armorIndex(armor: number, legacy: boolean): number {
+  if (legacy) {
+    const at = armor;
+    return at < 0 || at > 19 ? 0 : at;              // reproduces the original bug
+  }
+  return armor >= 1 && armor <= 20 ? armor - 1 : 0;  // corrected mapping
+}
 ```
 
-Setup downloads npm dependencies and, when needed, a pinned portable Zig 0.13.0 C++ compiler into `.tools/`. It checks the compiler archive's SHA-256, compiles both C++ targets, builds the frontend, and runs automated tests. **No Visual Studio installation, administrator access, or manual compiler PATH changes are required.** Initial setup needs Internet access and several hundred MB of free space; normal use is offline. The supplied portable compiler targets x64 Windows; other architectures should use an appropriate C++17 compiler/CMake.
+**The legacy file formats.** `.UNT`/`.BTL` files are fixed-width,
+NUL-terminated ASCII records, reverse-engineered from the original's
+read/write code (`src/engine/legacy-io.ts`). They also carry a real quirk:
+a save/restore overlap in the original means some files run a few bytes
+longer than `records × recordSize`; the reader accepts both lengths, and
+`tests/legacy-io.test.mjs` round-trips files in both forms.
 
-`run.ps1` starts the server and opens **http://127.0.0.1:4173**. Keep the PowerShell window open. Press **Ctrl+C** to stop. Alternatives:
+## Running it
 
-```powershell
-.\run.ps1 -Port 4180
-.\run.ps1 -NoBrowser
+Requires Node.js 18+ (uses `node:test`) and, for `npm run test:reference`
+specifically, a C++ compiler (`g++` or similar).
+
+```sh
+npm install
+npm run build          # tsc, then copies build/ into dist/engine and dist/data
+npm test                # runs the full suite, including the engine-vs-original.test.mjs smoke checks
+npm run test:reference  # compiles the real original C++ into tests/reference/out/reference,
+                         # which unlocks the full differential battle comparisons
+npm test                # run again with the reference binary present for full coverage
 ```
 
-On this computer, the project is at `C:\Code\Apps\Warcom`.
+To use the web app itself, serve `dist/` with any static file server and
+open `index.html` — it's plain HTML/CSS/JS with ES module imports, so it
+needs `http(s)://`, not a bare `file://` double-click (the bundled offline
+build below is for that). For example:
 
-## Using WARCOM
-
-* **Units:** add, edit, duplicate, or remove units. All 27 original fields are available. Reset copies starting stats to current stats, preserving modifiers and the previous morale-failure code as the original did. Removing a unit removes its linked assignments and renumbers remaining references.
-* **Assignments:** choose attacker and defender, absolute counts or percentages, modifier, concussion multiplier (0–9), critical mode, and optional weapon override. Blank or zero counts mean all. `300%` means three attacks per current combatant. Resolve one assignment or the entire queue.
-* **Battle log:** review each resolution, casualties, average hits, and its random seed. Undo restores the latest resolution. Editing/saving a battle invalidates that undo snapshot.
-* **Weapons:** inspect all 49 complete original weapon tables across armor types 1–20. The archived whip table is incomplete and is not selectable.
-* **Files & settings:** name your battle; enable constant OB/DB/movement (`/C`); optionally reproduce the legacy armor-index bug; save/load snapshots; import/export complete JSON battles and legacy UNT/BTL files.
-
-Click **Save changes** after editing. Resolution, export, and snapshot saving save edits first. Loading/importing/new-battle actions replace active data; save a snapshot before switching. The illustrative training engagement is a useful first run; it is not the original manual's Potter's Hill battle, whose files were not supplied.
-
-Full rounds retain each attacker's stats from the beginning of the round, while defenders accumulate damage in assignment order. This preserves WARCOM's actual implementation; it is not a fully order-independent simulation. A unit eliminated during a round can still perform its already-planned attack with its starting stats. Single-assignment resolution uses current stats.
-
-Morale failures A–E need referee interpretation. Tactical movement, routing, and round duration are intentionally not automated. Editing current morale does not affect the next morale calculation: use starting morale or its modifier. The exhaustion modifier is descriptive only because the original calculation never consumed it.
-
-## Files and recovery
-
-* `data/active.json` stores the active battle, up to 100 resolution records, and one undo snapshot. Writes use a temporary file and rename.
-* `data/battle-<id>.json` files are explicit saved snapshots. Back up this folder or export complete battles.
-* `data/server.stdout.log` and `data/server.stderr.log` contain launcher diagnostics.
-* Import **UNT before BTL**. Importing units clears assignments and history to avoid incorrect unit references. Importing BTL replaces assignments and clears history. Interior empty record slots retain their original numeric IDs.
-* Supported legacy formats: 50- or 200-record UNT and **2.1+** BTL, with or without their extra trailing bytes. Older BTL layouts are rejected. No historical fixture files were supplied, so compatibility is verified using the original screen schema and generated round trips rather than real campaign files.
-* Legacy exports enforce the original short ASCII field widths; they report an error rather than truncate long names or numbers. JSON supports larger UTF-8 fields (up to 60 characters / 63 bytes).
-* An invalid `active.json` is not silently discarded. Back it up, repair it, or rename it and restart to open an empty workspace.
-
-## Architecture and retained C++
-
-```text
-React / TypeScript / Vite browser UI
-            ↓ local HTTP, one origin
-Node.js API + local JSON documents
-            ↓ bounded stdin/stdout protocol
-C++17 WARCOM executable, fresh process per resolution
+```sh
+cd dist && python3 -m http.server 8080
+# then open http://localhost:8080/
 ```
 
-Node is used instead of FastAPI because orchestration and document persistence do not need an additional Python runtime. JSON files preserve the original scenario-document model without unnecessary database administration.
+`dist/index.html` loads Google Fonts and JSZip (for legacy file zipping)
+from a CDN; `warcom-command-offline.zip` is the same app with both of those
+made local, for running with no internet access at all (see below).
 
-`core/resolver.cpp` retains the original damage interpolation, critical tables and probabilities, casualty accounting, wounded-target estimation, stochastic rounding, morale, exhaustion, and combat adjustments. The Park–Miller shuffled and positive-Gaussian routines remain C++. Owned arrays and bounded fields replace DOS memory and unchecked allocation. A validated weapon parser replaces unsafe parsing. In-memory snapshots replace temporary backup-file access. A process boundary isolates the old global random state and avoids native bindings/ABI dependencies.
+## Repository layout
 
-`legacy/` preserves every original file, unchanged. `scripts/extract-core.mjs` records the limited source transformations and generates the portable reference and modern resolver. `core/reference.cpp` is a test-only reference using the original formula/indexing behavior with the same portability seams. It is not invoked by the web application.
-
-## Tests and builds
-
-```powershell
-npm run build:core       # Compile C++ engine and comparison reference
-npm test                # C++ regression/comparison tests, API and file tests
-npm run build           # TypeScript check and production browser bundle
-npm start               # Serve production app without opening a browser
+```
+.
+├── src/engine/        TypeScript combat engine (types, rng, resolve, model, legacy-io, weapons, tables)
+├── src/data/           Generated: the original WEAPONS.DAT, embedded as a TS constant
+├── dist/                The deployable web app: index.html + app.js (hand-written),
+│                         plus engine/ and data/ (compiled from src/, copied in by `npm run build`)
+├── legacy/              The original DOS C++ source, untouched — the ground truth
+├── tests/                node:test suite, including the C++ reference-oracle harness
+├── tools/                Codegen scripts (tables/weapons) and the build's copy step
+├── docs/screenshots/     Screenshots used in the user manual below
+└── warcom-command-offline.zip   Prebuilt, fully offline runtime (see inside for its own README)
 ```
 
-The C++ tests invoke the real executables through their public process interface. They compare 7 target types × 6 critical modes × 3 seeds, every complete weapon at armor boundaries, and targeted edge cases. A golden seed-444 scenario checks casualties, hits, morale, exhaustion, OB, DB, and movement. API tests use a temporary directory and ephemeral local port. Frontend validation includes the TypeScript build and real browser workflow checks; see `VALIDATION.md` for the completed checks.
+## User manual
 
-For a conventional C++17 compiler:
+### The layout
 
-```powershell
-cmake -S . -B build-cmake
-cmake --build build-cmake --config Release
-ctest --test-dir build-cmake -C Release --output-on-failure
-```
+The app opens on a sample battle ("Training bout (sample)") so you can see
+how everything fits together before building your own.
 
-Set `WARCOM_ENGINE` to the absolute built `warcom-engine.exe` path when using that build with the API. `CXX` can specify a GCC/Clang-compatible compiler for `npm run build:core`; MSVC users should use CMake. The automated Windows path uses Zig directly and does not need CMake.
+- **Roster rail** (left) — every unit, with strength percentages and
+  stamps showing who's attacking (**A**) or defending (**D**) this round.
+- **Tab strip** — Unit, Attacks, Battle log, Weapons, Settings.
+- **Dispatch bar** (top) — battle name, a live count of queued attacks and
+  the current round, and **Resolve queue**.
 
-Development uses two terminals:
+![Default view: the Unit tab with the roster rail on the left](docs/screenshots/01-overview.png)
 
-```powershell
-npm start               # API on 4173
-npm run dev             # Vite frontend, with /api proxied to 4173
-```
+Click any unit in the roster to load it into the Unit tab. Click a tab name
+to switch panels — it's all one page, nothing reloads.
 
-`PORT` changes the production/API port; `WARCOM_DATA_DIR` changes the storage directory. Use one server per data directory. The default server binds exclusively to IPv4 loopback and rejects nonlocal origins/hostnames.
+### Managing units
 
-## Behavioral differences and limitations
+1. **Add a unit** — click **+ Add unit** at the bottom of the roster rail.
+2. **Identity** — `Name`, `Race`, `Type (size class)`, `Formation` are free
+   text; `Type` drives which critical-table size class the unit uses
+   (small, normal, large, and so on).
+3. **Combat basics** — `Weapon` must match a name in the weapons reference;
+   `Armor type` is 1–20; `Discipline modifier` affects morale rolls (elite
+   ≈ −5, average ≈ −20, poor ≈ −60).
+4. **Statistics** — three columns per row: `Start`, `Now` (changes as
+   combat happens), and `Mod` (a standing modifier). Fill in Morale, OB,
+   DB, Exhaustion, Movement, Number (troop count), and Average hits.
 
-* Armor indexing is corrected by default. Enable **Legacy armor indexing** to reproduce AT1→AT2 and AT20→AT1 behavior.
-* Both random generators are explicitly seeded. A fixed portable LCG replaces compiler-dependent `rand()`. Repeating the same input, settings, and seed reproduces a result, but the historical DOS `/D` sequence is not promised.
-* Whip's AT1 row is missing its A-critical threshold. It remains archived and unavailable; no guessed rule was introduced.
-* Invalid stats and references produce errors instead of legacy silent coercion or undefined behavior. Current strength/hits cannot exceed starting values.
-* One engine call has a 30-second limit; very large attack multipliers across 200 assignments may need reducing.
-* The program is a single-user local tool, not a shared multiplayer server. Edits from multiple browser tabs are not merged.
-* Original tables are approximations, and apparent table oddities remain unchanged. No claim is made that these tables reproduce every published Rolemaster rule.
+![A newly added unit, "Reserve Pikemen," with identity and statistics filled in](docs/screenshots/02-unit-filled.png)
 
-See `MIGRATION_PLAN.md` for the detailed source inventory, decisions, and uncertainties. Useful next improvements are validation against real historical campaign files, an authoritative repair of the whip table, and finer-grained per-attack audit traces.
+Four buttons below the statistics table:
 
-## Project structure
+- **Reset stats to start** — copies every `Start` value back into `Now`
+  (the original program's F5 key). Use between battles.
+- **Duplicate unit** — exact copy, handy for building a roster quickly.
+- **Clear unit** — blanks the fields without removing the slot.
+- **Remove unit** — deletes the unit and renumbers any attacks that
+  referenced it.
 
-```text
-frontend/       React interface, types and styles
-backend/        HTTP API, validation, files, C++ integration
-core/           Retained C++17 resolver, adapter, reference and valid weapon tables
-legacy/         Unmodified original repository
-tests/          Engine parity, behavior, API and file-format tests
-scripts/        Reproducible extraction and compiler invocation
-data/           Local battle documents (not committed)
-setup.ps1       Install, compile, build, test
-run.ps1         Start, open browser, stop cleanly
-CMakeLists.txt  Optional conventional C++ build
-```
+### Filtering the roster
 
-The original GPL-3.0 license is preserved in `LICENSE`; original authorship and manual are retained in `legacy/`.
+The search box above the roster matches against name and race as you type.
+
+![Roster filtered to "Raider Warband" by searching "raid"](docs/screenshots/03-roster-filter.png)
+
+### Queuing attacks
+
+Switch to **Attacks** to build the round's queue. Each row is one attack.
+
+![Attacks tab with three queued attacks and live previews](docs/screenshots/04-attacks-queue.png)
+
+Click **+ Add attack** for a row (it stays hidden until you've picked at
+least an attacker or defender, to avoid table clutter). Fields:
+
+- **Attacker / Defender** — from the roster.
+- **Size** (one per side) — blank for the whole unit, a percentage
+  (`25%`), or an absolute troop count — same syntax the original used.
+- **Mod** — a numeric modifier for this attack only.
+- **Dmx** — a single-character concussion-damage multiplier code.
+- **SpCr** — special critical mode: normal, double, kata, magic, holy,
+  slaying.
+- **Weapon override** — blank uses the attacker's own weapon; type a
+  different name to use its table just for this attack.
+
+Under each row, a note explains how it expands ("28 attacks against up to
+24 defenders") or flags a problem before you resolve anything. Each row
+also has its own **Resolve** button to run just that attack immediately.
+
+### Resolving combat
+
+Click **Resolve queue** (or a row's own **Resolve**). Every queued attack
+is rolled with the same RNG routines as the original, unit stats update
+immediately, and an entry lands in the battle log.
+
+![After resolving: the roster shows the casualties each unit took](docs/screenshots/05-resolve-round.png)
+
+The queue stays in place afterward, so you can tweak modifiers and resolve
+another round without rebuilding it.
+
+### The battle log and undo
+
+**Battle log** keeps a running history, newest first — who attacked whom,
+with what weapon, how many attacks landed, casualties, and total damage.
+
+![Battle log after one round: three attack results with casualties and damage](docs/screenshots/06-battle-log.png)
+
+Each entry has its own **Undo**, which reverts every unit to its
+statistics from just before that resolution and removes the entry. It asks
+for confirmation first, since it can't be redone:
+
+![Undo confirmation dialog](docs/screenshots/07-undo-confirm.png)
+
+> Undo restores a saved snapshot from just before that specific
+> resolution, for entries still in the log this session — it isn't a full
+> history you can step through freely.
+
+### The weapons reference
+
+**Weapons** is a browsable copy of the original `WEAPONS.DAT` — every
+weapon's armor-type breakpoints and critical-severity columns (E–A) by
+armor type. Click a weapon on the left to see its table.
+
+![The "whip" table, flagged incomplete, missing one value from the original data](docs/screenshots/08-weapons.png)
+
+One entry, **whip**, is marked *(incomplete)*: the original `WEAPONS.DAT`
+file itself is missing one data value for it. Rather than inventing a
+number to fill the gap, the table is shown for reference but can't be
+selected for an attack.
+
+### Settings and combat rules
+
+![Settings tab: combat rules, battle-file save/load, legacy DOS file import/export](docs/screenshots/09-settings.png)
+
+**Combat rules**
+
+- **Constant OB, DB and movement** — damage and exhaustion never adjust
+  OB/DB/movement (the original's `/C` switch).
+- **Legacy armor indexing** — reproduces the off-by-one armor bug
+  described [above](#how-it-was-ported) exactly. Off by default (corrected
+  mapping); turn on to match old saved results.
+- **Fixed random seed** — same units/attacks/settings always produce the
+  same result; useful for testing. A `Seed` field appears when enabled.
+
+**Battle file** — `Save battle (.json)` / `Load battle (.json)` store the
+whole battle (roster, queue, log, round counter, settings) in one native
+JSON file. `New battle` clears everything (with confirmation).
+
+**Legacy DOS files** — reads and writes the original formats directly,
+both the 50- and 200-record layouts, with or without the original's extra
+trailing bytes. Because a browser can only offer a limited set of
+downloadable types, exported `.UNT`/`.BTL` files arrive inside a `.zip` —
+unzip it to get the original file back, byte-for-byte.
+
+The original format uses short, fixed-width fields (e.g. a unit name is
+capped at 30 characters). If your data won't fit, export stops and shows
+exactly which fields are the problem, rather than silently truncating:
+
+![Export validation error: a unit name exceeds the 30-character legacy limit](docs/screenshots/10-export-error.png)
+
+| Format | Use for | Where |
+|---|---|---|
+| `.json` | Saving/loading a full battle in this app's own format | Settings → Battle file |
+| `.UNT` (zipped) | Original DOS unit roster files | Settings → Legacy DOS files |
+| `.BTL` (zipped) | Original DOS attack/battle files | Settings → Legacy DOS files |
+
+> Work also autosaves to the browser's local storage as you go. That's
+> local to the browser/machine you're using — not a substitute for saving
+> a `.json` if you want a portable copy.
+
+### Worked example: a skirmish
+
+Walking through the sample battle loaded by default:
+
+1. **Roster**: *1st Foot* and *Longbow Levy* on one side, *Raider Warband*
+   and *Outrider Cavalry* on the other.
+2. **Queue**: three attacks are pre-loaded — 1st Foot vs. Raider Warband
+   (25% each side), Longbow Levy vs. Outrider Cavalry (full unit vs. 10%,
+   +10 modifier), Raider Warband vs. 1st Foot (25% each side, −10
+   modifier).
+3. **Resolve**: click **Resolve queue**. One run produced 4 casualties /
+   532 damage, 4 casualties / 200 damage, and 5 casualties / 387 damage
+   across the three attacks respectively (your numbers will differ unless
+   "Fixed random seed" is on).
+4. **Read the results** in Battle log, or glance at the roster — strength
+   percentages drop for units that took casualties.
+5. **Adjust and continue** — tweak a modifier, resolve again, or **Undo**
+   from the log if a round needs rolling back.
+
+### Tips and troubleshooting
+
+- **"Bad weapon" / a flagged attack row** — the weapon name doesn't match
+  anything in Weapons. Check spelling; note "whip" specifically can't be
+  used (incomplete table).
+- **Export refuses with a field-length error** — shorten the flagged
+  value; nothing exports until every field fits.
+- **Importing `.UNT`/`.BTL`** — a raw file or a `.zip` containing one are
+  both accepted. Importing units replaces the whole roster and clears the
+  attack queue/log (unit references must stay correct) — you'll be asked
+  to confirm.
+- **Reproducible results** — turn on "Fixed random seed" before resolving.
+- **Comparing against old saved results** — turn on "Legacy armor
+  indexing".
+- **Dark mode** — follows your system setting automatically; no in-app
+  switch.
+
+![Dark mode, following the system setting automatically](docs/screenshots/12-dark-mode.png)
+
+## The offline runtime
+
+`warcom-command-offline.zip` is the same app pre-bundled so it runs from a
+plain double-clicked `index.html`, with no server and no network access:
+
+- The engine and UI are bundled into a single plain `<script>`
+  (`bundle.js`, built with esbuild), instead of ES module imports, which
+  browsers refuse to load over `file://`.
+- JSZip is vendored locally (`vendor-jszip.min.js`, unmodified upstream
+  v3.10.1) instead of loaded from a CDN, so the `.UNT`/`.BTL` zip
+  export/import still works offline.
+- File saving uses a plain `Blob` + `<a download>` browser download,
+  rather than the hosted version's platform-specific save API.
+- Fonts fall back to your system's serif/sans/monospace instead of
+  downloading from Google Fonts.
+
+See the `README.txt` inside the zip for details. It's fully cross-platform
+(Windows/macOS/Linux) and needs no internet connection — the whole app,
+combat engine, weapon tables, and legacy file support are included.
+
+## License
+
+GPL-3.0, inherited from the original Warcom (David Eubanks). See
+[`LICENSE`](LICENSE). The original DOS source in `legacy/` is reproduced
+unmodified, with permission, from
+[github.com/code-moth/Warcom](https://github.com/code-moth/Warcom).

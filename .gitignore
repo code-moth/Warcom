@@ -1,9 +1,5 @@
 node_modules/
-dist/
 build/
-.tools/
-!data/.gitkeep
-source-download/
-repository-info.json
-test-results/
-releases/
+tests/reference/out/
+*.log
+.DS_Store
