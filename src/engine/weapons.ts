@@ -1,4 +1,5 @@
 import type { ArmorRow, Weapon } from './types.js';
+import type { CritIndex, WeaponCorrection } from '../data/weapon-corrections.js';
 
 /**
  * Parser for WEAPONS.DAT, mirroring initWeap() in RESOLVE.CPP.
@@ -17,7 +18,7 @@ import type { ArmorRow, Weapon } from './types.js';
 
 const NUMBERS_PER_TABLE = 20 * 8;
 
-export function parseWeaponsDat(text: string): Weapon[] {
+export function parseWeaponsDat(text: string, corrections: readonly WeaponCorrection[] = []): Weapon[] {
   const weapons: Weapon[] = [];
   let pos = 0;
 
@@ -56,8 +57,44 @@ export function parseWeaponsDat(text: string): Weapon[] {
         crit: [nums[o + 3]! & 255, nums[o + 4]! & 255, nums[o + 5]! & 255, nums[o + 6]! & 255, nums[o + 7]! & 255],
       };
     }
-    weapons.push({ name, rows, complete: missing === 0, missing });
+    const weapon: Weapon = { name, rows, complete: missing === 0, missing };
+    applyCorrections(weapon, corrections);
+    weapons.push(weapon);
     if (nextWeapon < 0) break;
   }
   return weapons;
+}
+
+/**
+ * Repairs damaged data. A "fill" correction (no `expected`) is used only when
+ * the weapon is incomplete and the fills cover every missing number, so a table
+ * damaged in some other way is never silently "repaired". A "replace"
+ * correction is used only if the original still holds the values it expects.
+ */
+function applyCorrections(weapon: Weapon, corrections: readonly WeaponCorrection[]): void {
+  const mine = corrections.filter((c) => c.weapon === weapon.name);
+  if (mine.length === 0) return;
+  const notes: string[] = [];
+
+  const fills = mine.filter((c) => !c.expected);
+  const fillCount = fills.reduce((n, c) => n + Object.keys(c.set).length, 0);
+  if (!weapon.complete && fills.length > 0 && fillCount === weapon.missing) {
+    for (const c of fills) {
+      const row = weapon.rows[c.armorType - 1];
+      if (!row) continue;
+      for (const [k, v] of Object.entries(c.set)) row.crit[Number(k) as CritIndex] = v & 255;
+      notes.push(c.note);
+    }
+    weapon.complete = true;
+  }
+
+  for (const c of mine.filter((c) => c.expected)) {
+    const row = weapon.rows[c.armorType - 1];
+    if (!row) continue;
+    const matches = Object.entries(c.expected!).every(([k, v]) => row.crit[Number(k) as CritIndex] === v);
+    if (!matches) continue;
+    for (const [k, v] of Object.entries(c.set)) row.crit[Number(k) as CritIndex] = v & 255;
+    notes.push(c.note);
+  }
+  if (notes.length) weapon.corrections = notes;
 }

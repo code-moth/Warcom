@@ -11,13 +11,14 @@ import {
 } from './engine/model.js';
 import { parseWeaponsDat } from './engine/weapons.js';
 import { WEAPONS_DAT } from './data/weapons-dat.js';
+import { WEAPON_CORRECTIONS } from './data/weapon-corrections.js';
 import { resolveRound, resolveSingle, previewAttack, findWeapon } from './engine/resolve.js';
 import { Rng } from './engine/rng.js';
 import {
   parseUnitFile, parseBattleFile, writeUnitFile, writeBattleFile,
 } from './engine/legacy-io.js';
 
-const WEAPONS = parseWeaponsDat(WEAPONS_DAT);
+const WEAPONS = parseWeaponsDat(WEAPONS_DAT, WEAPON_CORRECTIONS);
 const USABLE_WEAPON_NAMES = WEAPONS.filter((w) => w.complete).map((w) => w.name).sort((a, b) => a.localeCompare(b));
 
 const DRAFT_KEY = 'warcom-command-draft-v1';
@@ -519,12 +520,13 @@ function renderWeaponsTab(container) {
     list.append(el('button', {
       class: w.name === state.ui.selectedWeapon ? 'active' : '',
       onclick: () => { state.ui.selectedWeapon = w.name; renderTabPanels(); },
-    }, w.name, !w.complete ? el('span', { class: 'flag' }, '(incomplete)') : null));
+    }, w.name, !w.complete ? el('span', { class: 'flag' }, '(incomplete)') : w.corrections ? el('span', { class: 'flag' }, '(repaired)') : null));
   });
 
   const detail = el('div', { class: 'weapon-detail' });
   const w = WEAPONS.find((x) => x.name === state.ui.selectedWeapon) ?? WEAPONS[0];
   if (w) {
+    if (w.corrections) detail.append(el('div', { class: 'incomplete-banner' }, el('strong', {}, 'Repaired values: '), ...w.corrections.map((t) => el('div', { style: 'margin-top:6px' }, t))));
     if (!w.complete) detail.append(el('div', { class: 'incomplete-banner' }, `This table is missing ${w.missing} value(s) in the original data and is archived; it cannot be selected for an attack.`));
     const table = el('table', { class: 'armor-table' },
       el('thead', {}, el('tr', {}, ['Armor type', 'Max', 'Start', 'Min', 'E', 'D', 'C', 'B', 'A'].map((h) => el('th', {}, h)))),

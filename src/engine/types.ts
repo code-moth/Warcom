@@ -78,6 +78,8 @@ export interface Weapon {
   complete: boolean;
   /** How many numbers the source table was missing. */
   missing: number;
+  /** Notes for values repaired from documented corrections (see weapon-corrections.ts). */
+  corrections?: string[];
 }
 
 export interface Settings {

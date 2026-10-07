@@ -83,6 +83,9 @@ hand-transcribed — `tools/gen-tables.mjs` and `tools/gen-weapons.mjs`
 extract them programmatically from `legacy/RESOLVE.CPP` and
 `legacy/WEAPONS.DAT` into `src/engine/tables.ts` and
 `src/data/weapons-dat.ts`, so a transcription error simply can't happen.
+The one place the original data is damaged (the whip table, which ends
+mid-row) is repaired by a separate, documented correction layer rather than
+by editing the data; see [the weapons reference](#the-weapons-reference).
 
 **A genuine bug, reproduced on purpose.** Armor type is documented
 throughout War Law as **AT1–AT20** (1-indexed), but the original C++ used
@@ -269,12 +272,26 @@ for confirmation first, since it can't be redone:
 weapon's armor-type breakpoints and critical-severity columns (E–A) by
 armor type. Click a weapon on the left to see its table.
 
-![The "whip" table, flagged incomplete, missing one value from the original data](docs/screenshots/08-weapons.png)
+One entry, **whip**, is marked *(repaired)*. The original `WEAPONS.DAT` has
+three damaged spots in its table, and the app repairs each one and says so on
+the weapon's page:
 
-One entry, **whip**, is marked *(incomplete)*: the original `WEAPONS.DAT`
-file itself is missing one data value for it. Rather than inventing a
-number to fill the gap, the table is shown for reference but can't be
-selected for an attack.
+- **Armor type 1, "A" = 94 (interpolated).** The file ends partway through this
+  row, so the value is missing. The E, D, C and B thresholds sit 2, 4, 6 and 8
+  above those of armor type 2, so "A" sits 10 above armor type 2's 84.
+- **Armor type 13, "A" = 115 (was 155).** In every other weapon "A" is below
+  "B", but here it is 155 against a "B" of 127, which looks like a typing slip.
+  115 sits between armor types 12 (110) and 14 (125).
+- **Armor type 16, 150 / 148 / 143 / 137 / 128 (was none / 150 / 147 / 143 / 135).**
+  The original is an exact copy of armor type 18's row, which happens in no
+  other weapon. It is replaced with the rounded average of armor types 15 and 17.
+
+The original file is never edited. The repairs live in
+`src/data/weapon-corrections.ts`. The first fills a gap and is used only on a
+weapon the parser reports as incomplete; the other two replace values and are
+used only if the file still holds exactly the values they were written for.
+
+![The "whip" table, tagged repaired, with its three repaired values explained](docs/screenshots/08-weapons.png)
 
 ### Settings and combat rules
 
@@ -338,8 +355,7 @@ Walking through the sample battle loaded by default:
 ### Tips and troubleshooting
 
 - **"Bad weapon" / a flagged attack row** — the weapon name doesn't match
-  anything in Weapons. Check spelling; note "whip" specifically can't be
-  used (incomplete table).
+  anything in Weapons. Check spelling.
 - **Export refuses with a field-length error** — shorten the flagged
   value; nothing exports until every field fits.
 - **Importing `.UNT`/`.BTL`** — a raw file or a `.zip` containing one are

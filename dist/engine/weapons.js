@@ -13,7 +13,7 @@
  * `complete: false` so the app can refuse to pretend the table is sound.
  */
 const NUMBERS_PER_TABLE = 20 * 8;
-export function parseWeaponsDat(text) {
+export function parseWeaponsDat(text, corrections = []) {
     const weapons = [];
     let pos = 0;
     for (;;) {
@@ -51,9 +51,49 @@ export function parseWeaponsDat(text) {
                 crit: [nums[o + 3] & 255, nums[o + 4] & 255, nums[o + 5] & 255, nums[o + 6] & 255, nums[o + 7] & 255],
             };
         }
-        weapons.push({ name, rows, complete: missing === 0, missing });
+        const weapon = { name, rows, complete: missing === 0, missing };
+        applyCorrections(weapon, corrections);
+        weapons.push(weapon);
         if (nextWeapon < 0)
             break;
     }
     return weapons;
+}
+/**
+ * Repairs damaged data. A "fill" correction (no `expected`) is used only when
+ * the weapon is incomplete and the fills cover every missing number, so a table
+ * damaged in some other way is never silently "repaired". A "replace"
+ * correction is used only if the original still holds the values it expects.
+ */
+function applyCorrections(weapon, corrections) {
+    const mine = corrections.filter((c) => c.weapon === weapon.name);
+    if (mine.length === 0)
+        return;
+    const notes = [];
+    const fills = mine.filter((c) => !c.expected);
+    const fillCount = fills.reduce((n, c) => n + Object.keys(c.set).length, 0);
+    if (!weapon.complete && fills.length > 0 && fillCount === weapon.missing) {
+        for (const c of fills) {
+            const row = weapon.rows[c.armorType - 1];
+            if (!row)
+                continue;
+            for (const [k, v] of Object.entries(c.set))
+                row.crit[Number(k)] = v & 255;
+            notes.push(c.note);
+        }
+        weapon.complete = true;
+    }
+    for (const c of mine.filter((c) => c.expected)) {
+        const row = weapon.rows[c.armorType - 1];
+        if (!row)
+            continue;
+        const matches = Object.entries(c.expected).every(([k, v]) => row.crit[Number(k)] === v);
+        if (!matches)
+            continue;
+        for (const [k, v] of Object.entries(c.set))
+            row.crit[Number(k)] = v & 255;
+        notes.push(c.note);
+    }
+    if (notes.length)
+        weapon.corrections = notes;
 }
